@@ -1,0 +1,379 @@
+---
+title: "Content Based Filtering: Movie Recommendation"
+output: github_document
+---
+
+```{r setup, include=FALSE, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+In this tutorial contente based filtering will be applied with kmeans clustering to recommend movies to users. Kmenas is applied to cluster the movies based on their similar genres they share. Data used in the analysis is the movielens dataset, which can be accessed [here](https://grouplens.org/datasets/movielens/).
+
+Reference:(http://rpubs.com/tim-dim/recommender)
+
+### Load library and data
+
+```{r}
+
+library(tidyverse)
+library(tidyquant)
+
+```
+
+
+There are two data sets, one with details on the movies and other with ratings for the movies given by the users.
+
+
+#### Movies Data
+
+```{r}
+
+# movies data
+movies_tbl <- read_csv('ml-latest-small/movies.csv')
+
+movies_tbl %>% head()
+
+```
+
+The genres column will be split into separate cloumns for each genre.
+
+There are movies for which the genre is given as 'no genres listed'. They will be converted as 'unknown'
+
+```{r}
+movies_tbl %>% 
+  filter(movieId == 182727)
+```
+```{r}
+movies_tbl <- movies_tbl %>% 
+  mutate(genres = ifelse(genres == "(no genres listed)","unknown", genres))
+
+```
+
+Now we will sperate the genres column, for that first we figure out the maximum number of genres a movie has.
+
+```{r}
+movies_tbl %>% 
+  mutate(a = str_count(genres,pattern = fixed("|"))) %>% 
+  pull (a) %>% max()
+```
+We will now separate the genres cloumn and reshape the movies_tbl in the required format.
+
+```{r}
+
+movies_tbl <- movies_tbl %>% 
+  # separate genres into 10 clolumns
+  separate(genres, into = c('a','b','c','d','e','f','g','h','i','j'),
+           extra = 'merge', fill = 'right') %>% 
+  gather(key,value,-movieId,-title) %>% 
+  select(-key) %>% 
+  arrange(title) %>% 
+  mutate(fill = 1) %>% 
+  filter(!is.na(value)) %>% 
+  spread(key = value,value = fill, fill = 0, drop = TRUE) %>% 
+  add_column(genres = movies_tbl$genres) %>% 
+  select(movieId,title,genres,everything())
+
+movies_tbl %>% head() %>% 
+  knitr::kable()
+```
+
+We now have the data in the required format to perform kmeans clustering. The 1 and 0 in the columns created from genres states if the movie belongs to the genre or not.
+
+#### User Data
+
+```{r}
+user_tbl <- read_csv('ml-latest-small/ratings.csv')
+
+user_tbl %>% head()
+
+```
+
+```{r}
+# remove timestamp
+user_tbl <- select(user_tbl,-timestamp)
+```
+
+
+### Kmeans Clustering
+
+We will now perform kmenas clustering with the movies_tbl to cluster movies into similar clusters based on the genres they share.
+
+```{r eval=FALSE}
+
+# create a vector to store total sum of squares of the clusters
+wss <- vector("numeric")
+
+# list to store the cluster models
+cluster_models <- list()
+
+# we will perform kmeans clustering with 2 to 20 clusters and select the optimal clusters based on elbow method
+
+for (k in 1:19){
+
+  set.seed(1234)
+  
+  cluster_model <- kmeans(movies_tbl %>% select(-movieId,-title,-genres), 
+                          centers = k+1, iter.max = 200, nstart = 25,
+                          algorithm = 'Lloyd')
+
+  wss <- c(wss,cluster_model$tot.withinss)
+  
+  cluster_models[[k]] <- cluster_model
+
+}
+
+
+```
+
+
+```{r include=FALSE, eval=FALSE}
+write_rds(cluster_models,'cluster_models')
+write_rds(wss,'wss')
+```
+
+
+```{r include=FALSE}
+
+cluster_models <- read_rds('cluster_models')
+
+wss <- read_rds('wss')
+```
+
+
+```{r}
+
+# Plot the results
+
+ggplot(tibble(k = 2:20, wss = wss), aes(k, wss))+
+  geom_line(color = 'blue', size = 1)+
+  geom_point(size = 2, color = 'red')+
+  scale_x_continuous(breaks =  seq(2,20, 2))+
+  geom_vline(xintercept = 5, linetype = 'dashed')+
+  theme_tq()+
+  labs(title = 'Elblow Plot',subtitle = "Selecting number of clusters",
+       y = "toal within sum of squares", x = "Clusters")
+
+```
+
+
+
+From the elbow plot we can see the the total within sum of squares does not drop very much after 5 clusters or even 4 clusters and the drop is almost the same afterwards. But, for this analysis we will take 5 clusters.
+
+
+
+```{r}
+# Finally select kmeans cluster with 5 clusters
+
+kmeans_cluster <- cluster_models[[4]]
+
+```
+
+```{r include=FALSE}
+
+
+kmeans_cluster <- read_rds('kmeans_cluster')
+
+```
+
+ 
+Lets assign the movies their respective clusters.
+
+```{r}
+
+movies_tbl <- movies_tbl %>% 
+  mutate(cluster = kmeans_cluster$cluster)
+```
+
+### User Data
+
+Here, we will get the movies that a user has watched and the associated ratings.
+
+
+```{r}
+# function to extract user info
+
+get_user_info <- function(user_data, user_id){
+  
+  user_info <- user_data %>% 
+    filter(userId == user_id) %>% 
+    select(movieId, rating) 
+  
+  return(user_info)
+  
+}
+
+# test the function
+get_user_info(user_tbl,1) 
+
+```
+
+### Assigning the clusters
+
+Now, lets assign to the movies that the user has watched their respective clusters.
+
+
+```{r}
+# function to assign the clusters for the movies active user has watched
+
+assign_cluster <- function(movie_data, active_user){
+  
+  active_user <- active_user %>% 
+    left_join(movie_data %>% select(movieId,cluster), by = 'movieId')
+  
+  return(active_user)
+}
+
+# test the funtion
+
+active_user <- get_user_info(user_tbl,1)
+
+assign_cluster(movies_tbl, active_user )
+
+```
+
+
+### Select the best cluster
+
+We now calculate the mean ratings for each clusters of the movies that the user has watched and then select the cluster with the highest average rating as the most liked cluster by the user. 
+
+
+```{r}
+
+# get the mean cluster rating for the movies watched by the user and select the most highly rated cluster
+
+select_best_cluster <- function(active_user){
+  
+  avg_cluster_rating <- active_user %>% 
+    group_by(cluster) %>% 
+    summarise(avg_rating = mean(rating)) %>% 
+    ungroup()
+  
+  # if the max of avg_rating less than 3, we assign a value 0, else we select the cluster with max avg_rating
+  
+  if (max(avg_cluster_rating$avg_rating)< 3){
+    best_cluster <- 0
+  } else {
+    best_cluster <- avg_cluster_rating %>% filter(avg_rating == max(avg_rating)) %>% pull(cluster)
+  }
+  return(best_cluster)
+}
+
+
+# test the function
+
+active_user <- assign_cluster(movies_tbl, active_user )
+
+best_cluster <- select_best_cluster(active_user)
+best_cluster
+
+```
+
+
+### Get the films from the cluster liked by the user
+
+
+After we know the best cluster for the user, we now get all the movies from the best cluster. If the best cluster is 0 or if there are no cluster with > 3 avg rating, we return random 100 movies
+
+
+```{r}
+
+get_good_movies <- function(best_cluster, movie_data){
+  
+  if(best_cluster == 0){
+    recommended_movies <- movie_data%>% 
+      sample_n(size = 100) %>% 
+      pull(title)
+  } else {
+    recommended_movies <- movie_data %>% 
+      filter(cluster == best_cluster) %>% 
+      select(movieId,title)
+  }
+  return(recommended_movies)
+}
+
+# test the function
+get_good_movies(best_cluster, movies_tbl) %>% head(15)
+
+```
+
+### Get recommendations for the user
+
+From the list of the movies from the best cluster, we now will recommend top movies for the users.
+Lets put all the fucntions together to recommend best movies for the user.
+
+```{r}
+
+recommend_movies <- function(movie_data, user_data, user_id, n = 10){
+  
+  # get info about active user
+  
+  active_user <- get_user_info(user_data, user_id)
+  
+  # assigns the clusters for the movies active user has watched
+  active_user <- assign_cluster(movie_data, active_user)
+  
+  # get the best cluster for the user
+  best_cluster <-  select_best_cluster(active_user)
+  
+  # get movies to recommend from the best cluster
+  movies_to_recommend <- get_good_movies(best_cluster,movie_data)
+  
+  #select only movies not watched by the user from the movies to recommend
+  movies_to_recommend <- movies_to_recommend %>% 
+    anti_join(active_user, by = 'movieId')
+    
+  # select the top_n movies that have highest average ratings among the users
+  
+ top_movieId <-  movies_to_recommend %>% 
+    left_join(user_data, by = 'movieId') %>% 
+    group_by(movieId) %>% 
+    summarise(avg_rating = mean(rating)) %>% 
+    ungroup() %>% 
+    # select only movies with greater than 3 avg rating
+    filter(avg_rating > 3) %>% 
+    arrange(desc(avg_rating)) %>% 
+    slice(1:n) 
+    
+ final_recommendation <- top_movieId %>% 
+   left_join(movie_data, by = 'movieId') %>% 
+   select(title, genres, avg_rating) %>% 
+   rename('MOVIES YOU MAY ALSO LIKE' = title)
+   
+
+  return(DT::datatable(final_recommendation , options = list(searching = FALSE, pagelength = 15)))
+  
+}
+
+
+```
+
+
+Lets test our recommendation function
+
+```{r}
+# test the function
+recommend_movies(movie_data = movies_tbl,user_data = user_tbl,user_id = 4,n=15)
+
+```
+
+
+Lets also see if our recommendation matches the user's preference
+
+```{r}
+
+user_tbl %>% 
+  filter(userId == 4) %>%
+     left_join(movies_tbl,by = 'movieId') %>% 
+     select(title,rating,Action:Western) %>% 
+     gather(key = genre, value = is_yes,factor_key = TRUE,-title,-rating) %>% 
+     filter (is_yes == 1) %>% 
+     # group_by(genre) %>% 
+     # summarise(avg_rating = mean(rating)) %>% 
+     # arrange(desc(avg_rating))
+     count(genre, sort = T)
+    
+
+```
+
+
+We see our recommendation includes many movies of Drama genre, which is also most watched genre by the user.

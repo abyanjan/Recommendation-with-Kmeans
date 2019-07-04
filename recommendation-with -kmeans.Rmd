@@ -13,7 +13,7 @@ Reference:(http://rpubs.com/tim-dim/recommender)
 
 ### Load library and data
 
-```{r}
+```{r warning=FALSE, message=FALSE}
 
 library(tidyverse)
 library(tidyquant)
@@ -340,7 +340,7 @@ recommend_movies <- function(movie_data, user_data, user_id, n = 10){
    rename('MOVIES YOU MAY ALSO LIKE' = title)
    
 
-  return(DT::datatable(final_recommendation , options = list(searching = FALSE, pagelength = 15)))
+  return(final_recommendation %>% knitr::kable())
   
 }
 

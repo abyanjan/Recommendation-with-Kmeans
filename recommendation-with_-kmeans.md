@@ -390,7 +390,7 @@ recommend_movies <- function(movie_data, user_data, user_id, n = 10){
    rename('MOVIES YOU MAY ALSO LIKE' = title)
    
 
-  return(final_recommendation %>% knitr::kable())
+  return(final_recommendation)
   
 }
 ```
@@ -402,23 +402,24 @@ Lets test our recommendation function
 recommend_movies(movie_data = movies_tbl,user_data = user_tbl,user_id = 4,n=15)
 ```
 
-| MOVIES YOU MAY ALSO LIKE                                        | genres                       |  avg\_rating|
-|:----------------------------------------------------------------|:-----------------------------|------------:|
-| Supercop 2 (Project S) (Chao ji ji hua) (1993)                  | Action|Comedy|Crime|Thriller |         5.00|
-| Assignment, The (1997)                                          | Action|Thriller              |         5.00|
-| American Friend, The (Amerikanische Freund, Der) (1977)         | Crime|Drama|Mystery|Thriller |         5.00|
-| I, the Jury (1982)                                              | Crime|Drama|Thriller         |         5.00|
-| Branded to Kill (Koroshi no rakuin) (1967)                      | Action|Crime|Drama           |         5.00|
-| Sonatine (Sonachine) (1993)                                     | Action|Comedy|Crime|Drama    |         5.00|
-| Battle Royale 2: Requiem (Batoru rowaiaru II: Chinkonka) (2003) | Action|Drama|Thriller|War    |         5.00|
-| Mother (Madeo) (2009)                                           | Crime|Drama|Mystery|Thriller |         5.00|
-| Sisters (Syostry) (2001)                                        | Action|Crime|Drama           |         5.00|
-| Faster (2010)                                                   | Action|Crime|Drama           |         5.00|
-| Maniac Cop 2 (1990)                                             | Action|Horror|Thriller       |         5.00|
-| Villain (1971)                                                  | Crime|Drama|Thriller         |         5.00|
-| Rififi (Du rififi chez les hommes) (1955)                       | Crime|Film-Noir|Thriller     |         4.75|
-| Dead Man's Shoes (2004)                                         | Crime|Thriller               |         4.75|
-| Memories of Murder (Salinui chueok) (2003)                      | Crime|Drama|Mystery|Thriller |         4.70|
+    ## # A tibble: 15 x 3
+    ##    `MOVIES YOU MAY ALSO LIKE`                 genres             avg_rating
+    ##    <chr>                                      <chr>                   <dbl>
+    ##  1 Supercop 2 (Project S) (Chao ji ji hua) (~ Action|Comedy|Cri~       5   
+    ##  2 Assignment, The (1997)                     Action|Thriller          5   
+    ##  3 American Friend, The (Amerikanische Freun~ Crime|Drama|Myste~       5   
+    ##  4 I, the Jury (1982)                         Crime|Drama|Thril~       5   
+    ##  5 Branded to Kill (Koroshi no rakuin) (1967) Action|Crime|Drama       5   
+    ##  6 Sonatine (Sonachine) (1993)                Action|Comedy|Cri~       5   
+    ##  7 Battle Royale 2: Requiem (Batoru rowaiaru~ Action|Drama|Thri~       5   
+    ##  8 Mother (Madeo) (2009)                      Crime|Drama|Myste~       5   
+    ##  9 Sisters (Syostry) (2001)                   Action|Crime|Drama       5   
+    ## 10 Faster (2010)                              Action|Crime|Drama       5   
+    ## 11 Maniac Cop 2 (1990)                        Action|Horror|Thr~       5   
+    ## 12 Villain (1971)                             Crime|Drama|Thril~       5   
+    ## 13 Rififi (Du rififi chez les hommes) (1955)  Crime|Film-Noir|T~       4.75
+    ## 14 Dead Man's Shoes (2004)                    Crime|Thriller           4.75
+    ## 15 Memories of Murder (Salinui chueok) (2003) Crime|Drama|Myste~       4.7
 
 Lets also see if our recommendation matches the user's preference
 

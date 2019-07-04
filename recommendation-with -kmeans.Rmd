@@ -339,7 +339,7 @@ recommend_movies <- function(movie_data, user_data, user_id, n = 10){
    rename('MOVIES YOU MAY ALSO LIKE' = title)
    
 
-  return(final_recommendation %>% knitr::kable())
+  return(final_recommendation)
   
 }
 

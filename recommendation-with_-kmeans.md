@@ -87,18 +87,23 @@ movies_tbl <- movies_tbl %>%
   add_column(genres = movies_tbl$genres) %>% 
   select(movieId,title,genres,everything())
 
-movies_tbl %>% head() %>% 
-  knitr::kable()
+movies_tbl %>% head()
 ```
 
-|  movieId| title                              | genres                                      |  Action|  Adventure|  Animation|  Children|  Comedy|  Crime|  Documentary|  Drama|  Fantasy|   Fi|  Film|  Horror|  IMAX|  Musical|  Mystery|  Noir|  Romance|  Sci|  Thriller|  Thriller|Western|  unknown|  War|  Western|
-|--------:|:-----------------------------------|:--------------------------------------------|-------:|----------:|----------:|---------:|-------:|------:|------------:|------:|--------:|----:|-----:|-------:|-----:|--------:|--------:|-----:|--------:|----:|---------:|-----------------:|--------:|----:|--------:|
-|        1| Toy Story (1995)                   | Adventure|Animation|Children|Comedy|Fantasy |       0|          1|          1|         1|       1|      0|            0|      0|        1|    0|     0|       0|     0|        0|        0|     0|        0|    0|         0|                 0|        0|    0|        0|
-|        2| Jumanji (1995)                     | Adventure|Children|Fantasy                  |       0|          1|          0|         1|       0|      0|            0|      0|        1|    0|     0|       0|     0|        0|        0|     0|        0|    0|         0|                 0|        0|    0|        0|
-|        3| Grumpier Old Men (1995)            | Comedy|Romance                              |       0|          0|          0|         0|       1|      0|            0|      0|        0|    0|     0|       0|     0|        0|        0|     0|        1|    0|         0|                 0|        0|    0|        0|
-|        4| Waiting to Exhale (1995)           | Comedy|Drama|Romance                        |       0|          0|          0|         0|       1|      0|            0|      1|        0|    0|     0|       0|     0|        0|        0|     0|        1|    0|         0|                 0|        0|    0|        0|
-|        5| Father of the Bride Part II (1995) | Comedy                                      |       0|          0|          0|         0|       1|      0|            0|      0|        0|    0|     0|       0|     0|        0|        0|     0|        0|    0|         0|                 0|        0|    0|        0|
-|        6| Heat (1995)                        | Action|Crime|Thriller                       |       1|          0|          0|         0|       0|      1|            0|      0|        0|    0|     0|       0|     0|        0|        0|     0|        0|    0|         1|                 0|        0|    0|        0|
+    ## # A tibble: 6 x 26
+    ##   movieId title genres Action Adventure Animation Children Comedy Crime
+    ##     <int> <chr> <chr>   <dbl>     <dbl>     <dbl>    <dbl>  <dbl> <dbl>
+    ## 1       1 Toy ~ Adven~      0         1         1        1      1     0
+    ## 2       2 Juma~ Adven~      0         1         0        1      0     0
+    ## 3       3 Grum~ Comed~      0         0         0        0      1     0
+    ## 4       4 Wait~ Comed~      0         0         0        0      1     0
+    ## 5       5 Fath~ Comedy      0         0         0        0      1     0
+    ## 6       6 Heat~ Actio~      1         0         0        0      0     1
+    ## # ... with 17 more variables: Documentary <dbl>, Drama <dbl>,
+    ## #   Fantasy <dbl>, Fi <dbl>, Film <dbl>, Horror <dbl>, IMAX <dbl>,
+    ## #   Musical <dbl>, Mystery <dbl>, Noir <dbl>, Romance <dbl>, Sci <dbl>,
+    ## #   Thriller <dbl>, `Thriller|Western` <dbl>, unknown <dbl>, War <dbl>,
+    ## #   Western <dbl>
 
 We now have the data in the required format to perform kmeans clustering. The 1 and 0 in the columns created from genres states if the movie belongs to the genre or not.
 

@@ -73,8 +73,7 @@ movies_tbl <- movies_tbl %>%
   add_column(genres = movies_tbl$genres) %>% 
   select(movieId,title,genres,everything())
 
-movies_tbl %>% head() %>% 
-  knitr::kable()
+movies_tbl %>% head()
 ```
 
 We now have the data in the required format to perform kmeans clustering. The 1 and 0 in the columns created from genres states if the movie belongs to the genre or not.

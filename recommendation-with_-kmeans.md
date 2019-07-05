@@ -19,16 +19,7 @@ There are two data sets, one with details on the movies and other with ratings f
 ``` r
 # movies data
 movies_tbl <- read_csv('ml-latest-small/movies.csv')
-```
 
-    ## Parsed with column specification:
-    ## cols(
-    ##   movieId = col_integer(),
-    ##   title = col_character(),
-    ##   genres = col_character()
-    ## )
-
-``` r
 movies_tbl %>% head()
 ```
 
@@ -61,7 +52,7 @@ movies_tbl <- movies_tbl %>%
   mutate(genres = ifelse(genres == "(no genres listed)","unknown", genres))
 ```
 
-Now we will sperate the genres column, for that first we figure out the maximum number of genres a movie has.
+Now we will sperate the genres column, for that, first we figure out the maximum number of genres a movie has.
 
 ``` r
 movies_tbl %>% 
@@ -71,7 +62,7 @@ movies_tbl %>%
 
     ## [1] 9
 
-We will now separate the genres cloumn and reshape the movies\_tbl in the required format.
+There are maximum of 10 genres for a movie. We will now separate the genres cloumn and reshape the movies\_tbl in the required format.
 
 ``` r
 movies_tbl <- movies_tbl %>% 
@@ -80,7 +71,7 @@ movies_tbl <- movies_tbl %>%
            extra = 'merge', fill = 'right') %>% 
   gather(key,value,-movieId,-title) %>% 
   select(-key) %>% 
-  arrange(title) %>% 
+  #arrange(title) %>% 
   mutate(fill = 1) %>% 
   filter(!is.na(value)) %>% 
   spread(key = value,value = fill, fill = 0, drop = TRUE) %>% 
@@ -108,6 +99,8 @@ movies_tbl %>% head()
 We now have the data in the required format to perform kmeans clustering. The 1 and 0 in the columns created from genres states if the movie belongs to the genre or not.
 
 #### User Data
+
+Here is the user data, that has the information on the movies watched by the users and the ratings given.
 
 ``` r
 user_tbl <- read_csv('ml-latest-small/ratings.csv')
@@ -183,7 +176,7 @@ ggplot(tibble(k = 2:20, wss = wss), aes(k, wss))+
 
 ![](recommendation-with_-kmeans_files/figure-markdown_github/unnamed-chunk-12-1.png)
 
-From the elbow plot we can see the the total within sum of squares does not drop very much after 5 clusters or even 4 clusters and the drop is almost the same afterwards. But, for this analysis we will take 5 clusters.
+From the elbow plot we can see the the total within sum of squares does not drop very much after 5 clusters or even 4 clusters and the drop is almost the same afterwards. For this analysis, we will take 5 clusters.
 
 ``` r
 # Finally select kmeans cluster with 5 clusters
@@ -251,9 +244,7 @@ assign_cluster <- function(movie_data, active_user){
 
 # test the funtion
 
-active_user <- get_user_info(user_tbl,1)
-
-assign_cluster(movies_tbl, active_user )
+assign_cluster(movies_tbl, active_user = get_user_info(user_tbl,1) )
 ```
 
     ## # A tibble: 232 x 3
@@ -298,10 +289,9 @@ select_best_cluster <- function(active_user){
 
 # test the function
 
-active_user <- assign_cluster(movies_tbl, active_user )
+user <- assign_cluster(movies_tbl, active_user = get_user_info(user_tbl,1) )
 
-best_cluster <- select_best_cluster(active_user)
-best_cluster
+select_best_cluster(active_user = user)
 ```
 
     ## [1] 1
@@ -326,7 +316,7 @@ get_good_movies <- function(best_cluster, movie_data){
 }
 
 # test the function
-get_good_movies(best_cluster, movies_tbl) %>% head(15)
+get_good_movies(best_cluster = select_best_cluster(active_user = user), movies_tbl) %>% head(15)
 ```
 
     ## # A tibble: 15 x 2
@@ -350,7 +340,9 @@ get_good_movies(best_cluster, movies_tbl) %>% head(15)
 
 ### Get recommendations for the user
 
-From the list of the movies from the best cluster, we now will recommend top movies for the users. Lets put all the fucntions together to recommend best movies for the user.
+From the list of the movies from the best cluster, we now will recommend top n movies for the users.
+
+Lets put all the fucntions together to recommend best movies for the user.
 
 ``` r
 recommend_movies <- function(movie_data, user_data, user_id, n = 10){
@@ -399,33 +391,35 @@ Lets test our recommendation function
 
 ``` r
 # test the function
-recommend_movies(movie_data = movies_tbl,user_data = user_tbl,user_id = 4,n=15)
+recommend_movies(movie_data = movies_tbl,user_data = user_tbl,user_id = 6,n=15)
 ```
 
     ## # A tibble: 15 x 3
-    ##    `MOVIES YOU MAY ALSO LIKE`                 genres             avg_rating
-    ##    <chr>                                      <chr>                   <dbl>
-    ##  1 Supercop 2 (Project S) (Chao ji ji hua) (~ Action|Comedy|Cri~       5   
-    ##  2 Assignment, The (1997)                     Action|Thriller          5   
-    ##  3 American Friend, The (Amerikanische Freun~ Crime|Drama|Myste~       5   
-    ##  4 I, the Jury (1982)                         Crime|Drama|Thril~       5   
-    ##  5 Branded to Kill (Koroshi no rakuin) (1967) Action|Crime|Drama       5   
-    ##  6 Sonatine (Sonachine) (1993)                Action|Comedy|Cri~       5   
-    ##  7 Battle Royale 2: Requiem (Batoru rowaiaru~ Action|Drama|Thri~       5   
-    ##  8 Mother (Madeo) (2009)                      Crime|Drama|Myste~       5   
-    ##  9 Sisters (Syostry) (2001)                   Action|Crime|Drama       5   
-    ## 10 Faster (2010)                              Action|Crime|Drama       5   
-    ## 11 Maniac Cop 2 (1990)                        Action|Horror|Thr~       5   
-    ## 12 Villain (1971)                             Crime|Drama|Thril~       5   
-    ## 13 Rififi (Du rififi chez les hommes) (1955)  Crime|Film-Noir|T~       4.75
-    ## 14 Dead Man's Shoes (2004)                    Crime|Thriller           4.75
-    ## 15 Memories of Murder (Salinui chueok) (2003) Crime|Drama|Myste~       4.7
+    ##    `MOVIES YOU MAY ALSO LIKE`                genres              avg_rating
+    ##    <chr>                                     <chr>                    <dbl>
+    ##  1 Lamerica (1994)                           Adventure|Drama              5
+    ##  2 Awfully Big Adventure, An (1995)          Drama                        5
+    ##  3 In the Realm of the Senses (Ai no corrid~ Drama                        5
+    ##  4 What Happened Was... (1994)               Comedy|Drama|Roman~          5
+    ##  5 Entertaining Angels: The Dorothy Day Sto~ Drama                        5
+    ##  6 Lesson Faust (1994)                       Animation|Comedy|D~          5
+    ##  7 Four Days in September (O Que É Isso, Co~ Drama                        5
+    ##  8 Mephisto (1981)                           Drama|War                    5
+    ##  9 Ballad of Narayama, The (Narayama bushik~ Drama                        5
+    ## 10 On the Ropes (1999)                       Documentary|Drama            5
+    ## 11 Man and a Woman, A (Un homme et une femm~ Drama|Romance                5
+    ## 12 Red Sorghum (Hong gao liang) (1987)       Drama|War                    5
+    ## 13 Sandpiper, The (1965)                     Drama|Romance                5
+    ## 14 Madame Sousatzka (1988)                   Drama                        5
+    ## 15 All the Vermeers in New York (1990)       Comedy|Drama|Roman~          5
 
-Lets also see if our recommendation matches the user's preference
+Lets also see if our recommendation matches the user's preference.
+
+**Most watched genres by the user**
 
 ``` r
 user_tbl %>% 
-  filter(userId == 4) %>%
+  filter(userId == 6) %>%
      left_join(movies_tbl,by = 'movieId') %>% 
      select(title,rating,Action:Western) %>% 
      gather(key = genre, value = is_yes,factor_key = TRUE,-title,-rating) %>% 
@@ -436,19 +430,28 @@ user_tbl %>%
      count(genre, sort = T)
 ```
 
-    ## # A tibble: 21 x 2
+    ## # A tibble: 20 x 2
     ##    genre         n
     ##    <fct>     <int>
-    ##  1 Drama       120
-    ##  2 Comedy      104
-    ##  3 Romance      58
-    ##  4 Thriller     38
-    ##  5 Adventure    29
-    ##  6 Crime        27
-    ##  7 Action       25
-    ##  8 Mystery      23
-    ##  9 Fantasy      19
-    ## 10 Musical      16
-    ## # ... with 11 more rows
+    ##  1 Drama       140
+    ##  2 Comedy      127
+    ##  3 Romance      70
+    ##  4 Thriller     68
+    ##  5 Action       64
+    ##  6 Adventure    47
+    ##  7 Children     47
+    ##  8 Crime        35
+    ##  9 Fantasy      26
+    ## 10 Fi           21
+    ## 11 Sci          21
+    ## 12 Horror       19
+    ## 13 Mystery      15
+    ## 14 Animation    14
+    ## 15 Musical      12
+    ## 16 War          12
+    ## 17 Western      11
+    ## 18 IMAX          3
+    ## 19 Film          2
+    ## 20 Noir          2
 
-We see our recommendation includes many movies of Drama genre, which is also most watched genre by the user.
+We see our recommendation includes many movies of Drama genre,and other similar genres, which are also most watched genre by the user

@@ -26,7 +26,7 @@ There are two data sets, one with details on the movies and other with ratings f
 
 #### Movies Data
 
-```{r}
+```{r message=FALSE}
 
 # movies data
 movies_tbl <- read_csv('ml-latest-small/movies.csv')
@@ -49,14 +49,14 @@ movies_tbl <- movies_tbl %>%
 
 ```
 
-Now we will sperate the genres column, for that first we figure out the maximum number of genres a movie has.
+Now we will sperate the genres column, for that, first we figure out the maximum number of genres a movie has.
 
 ```{r}
 movies_tbl %>% 
   mutate(a = str_count(genres,pattern = fixed("|"))) %>% 
   pull (a) %>% max()
 ```
-We will now separate the genres cloumn and reshape the movies_tbl in the required format.
+There are maximum of 10 genres for a movie. We will now separate the genres cloumn and reshape the movies_tbl in the required format.
 
 ```{r}
 
@@ -66,7 +66,7 @@ movies_tbl <- movies_tbl %>%
            extra = 'merge', fill = 'right') %>% 
   gather(key,value,-movieId,-title) %>% 
   select(-key) %>% 
-  arrange(title) %>% 
+  #arrange(title) %>% 
   mutate(fill = 1) %>% 
   filter(!is.na(value)) %>% 
   spread(key = value,value = fill, fill = 0, drop = TRUE) %>% 
@@ -79,6 +79,8 @@ movies_tbl %>% head()
 We now have the data in the required format to perform kmeans clustering. The 1 and 0 in the columns created from genres states if the movie belongs to the genre or not.
 
 #### User Data
+
+Here is the user data, that has the information on the movies watched by the users and the ratings given.
 
 ```{r}
 user_tbl <- read_csv('ml-latest-small/ratings.csv')
@@ -156,7 +158,7 @@ ggplot(tibble(k = 2:20, wss = wss), aes(k, wss))+
 
 
 
-From the elbow plot we can see the the total within sum of squares does not drop very much after 5 clusters or even 4 clusters and the drop is almost the same afterwards. But, for this analysis we will take 5 clusters.
+From the elbow plot we can see the the total within sum of squares does not drop very much after 5 clusters or even 4 clusters and the drop is almost the same afterwards. For this analysis, we will take 5 clusters.
 
 
 
@@ -167,8 +169,7 @@ kmeans_cluster <- cluster_models[[4]]
 
 ```
 
-```{r include=FALSE}
-
+```{r include=FALSE, eval=FALSE}
 
 kmeans_cluster <- read_rds('kmeans_cluster')
 
@@ -224,9 +225,7 @@ assign_cluster <- function(movie_data, active_user){
 
 # test the funtion
 
-active_user <- get_user_info(user_tbl,1)
-
-assign_cluster(movies_tbl, active_user )
+assign_cluster(movies_tbl, active_user = get_user_info(user_tbl,1) )
 
 ```
 
@@ -260,10 +259,10 @@ select_best_cluster <- function(active_user){
 
 # test the function
 
-active_user <- assign_cluster(movies_tbl, active_user )
+user <- assign_cluster(movies_tbl, active_user = get_user_info(user_tbl,1) )
 
-best_cluster <- select_best_cluster(active_user)
-best_cluster
+select_best_cluster(active_user = user)
+
 
 ```
 
@@ -291,13 +290,14 @@ get_good_movies <- function(best_cluster, movie_data){
 }
 
 # test the function
-get_good_movies(best_cluster, movies_tbl) %>% head(15)
+get_good_movies(best_cluster = select_best_cluster(active_user = user), movies_tbl) %>% head(15)
 
 ```
 
 ### Get recommendations for the user
 
-From the list of the movies from the best cluster, we now will recommend top movies for the users.
+From the list of the movies from the best cluster, we now will recommend top n movies for the users.
+
 Lets put all the fucntions together to recommend best movies for the user.
 
 ```{r}
@@ -351,17 +351,19 @@ Lets test our recommendation function
 
 ```{r}
 # test the function
-recommend_movies(movie_data = movies_tbl,user_data = user_tbl,user_id = 4,n=15)
+recommend_movies(movie_data = movies_tbl,user_data = user_tbl,user_id = 6,n=15)
 
 ```
 
 
-Lets also see if our recommendation matches the user's preference
+Lets also see if our recommendation matches the user's preference.
+
+**Most watched genres by the user**
 
 ```{r}
 
 user_tbl %>% 
-  filter(userId == 4) %>%
+  filter(userId == 6) %>%
      left_join(movies_tbl,by = 'movieId') %>% 
      select(title,rating,Action:Western) %>% 
      gather(key = genre, value = is_yes,factor_key = TRUE,-title,-rating) %>% 
@@ -375,4 +377,4 @@ user_tbl %>%
 ```
 
 
-We see our recommendation includes many movies of Drama genre, which is also most watched genre by the user.
+We see our recommendation includes many movies of Drama genre,and other similar genres, which are  also most watched genre by the user
